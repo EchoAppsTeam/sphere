@@ -1,0 +1,26 @@
+{
+  "name": "sphere",
+  "description": "Collection of Grunt tasks to build and release projects built on top of Echo SDK",
+  "version": "0.1.0",
+  "author": {
+    "name": "Echo",
+    "url": "http://aboutecho.com"
+  },
+  "dependencies": {
+    "lodash": "~2.3.0",
+    "ftp-uploader": "git://github.com/EchoAppsTeam/ftp-uploader.git"
+  },
+  "keywords": [
+    "Echo",
+    "Apps",
+    "SDK",
+    "build",
+    "release",
+    "gruntplugin"
+  ],
+  "private": true,
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib-jshint": "~0.7.2"
+  }
+}
