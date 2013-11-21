@@ -117,37 +117,28 @@ module.exports = function(grunt) {
 	}
 
 	function prepareRelease(done) {
-		release.deploy.data = {};
-		_.each(release.deploy.targets, function(uploads, target) {
-			release.deploy.data[target] = _(uploads).chain().map(function(upload) {
-				return {
-					"src": grunt.file.expand({
-						"cwd": upload.cwd,
-						"filter": "isFile"
-					}, upload.src),
-					"dest": upload.dest,
-					"cwd": upload.cwd
-				};
-			}).flatten().value();
-		});
+		release.deploy.data = _.reduce(release.deploy.targets, function(acc, upload, target) {
+			acc[target] = {
+				"src": grunt.file.expand({
+					"cwd": upload.cwd,
+					"filter": "isFile"
+				}, upload.src),
+				"dest": upload.dest,
+				"cwd": upload.cwd
+			};
+			return acc;
+		}, {});
 		done();
 	}
 
 	function preReleaseCheck(done) {
 		// TODO: check if we have modified files, we must not release this
-		_.each(release.deploy.data, function(uploads, target) {
-			if (!uploads || !uploads.length) {
-				grunt.log.writeln("Nothing to upload for target ".yellow + target);
+		_.each(release.deploy.data, function(upload, target) {
+			if (!upload.src.length) {
+			grunt.log.writeln("Nothing to upload for target ".yellow + target);
 				done(false);
 				return;
 			}
-			_.each(uploads, function(upload) {
-				if (!upload.src.length) {
-					grunt.log.writeln("Empty source list for target ".yellow + target);
-					done(false);
-					return;
-				}
-			});
 		});
 
 		var loc = release.deploy.location;
@@ -173,12 +164,12 @@ module.exports = function(grunt) {
 		/* jshint validthis:true */
 		var target = this.args.slice(1).join(":");
 		/* jshint validthis:false */
-		var uploads = release.deploy.data[target];
+		var upload = release.deploy.data[target];
 		grunt.log.writeln((release.debug ? "[simulation] ".cyan : "") + "Releasing to " + release.deploy.location.cyan);
 		var ftp = new FtpUploader({
 			"complete": done,
 			"auth": release.config.auth[release.deploy.location],
-			"uploads": uploads,
+			"uploads": [upload],
 			"debug": release.debug,
 			"logger": {
 				"log": _.bind(grunt.log.writeln, grunt.log),
