@@ -9,7 +9,7 @@ module.exports = function(grunt) {
 
 	grunt.registerMultiTask("release", "Release", function() {
 		// don't let release everything at once
-		_.map(grunt.cli.tasks, function(name) {
+		_.each(grunt.cli.tasks, function(name) {
 			if (name === "release") {
 				grunt.fail.fatal(
 					"Can't release everything at once. " +
