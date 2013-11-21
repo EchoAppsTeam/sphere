@@ -37,7 +37,7 @@ module.exports = function(grunt) {
 			}
 		};
 		var sample = grunt.file.readJSON(options.configDir + "/sample.json");
-		_.each(options.environments, function(env) {
+		_.each(options.list, function(env) {
 			var filename = options.configDir + "/" + env + ".json";
 			var oldCfg = grunt.file.exists(filename) ? grunt.file.readJSON(filename) : {};
 			var newCfg = options.cleanup(_.cloneDeep(sample), env);
@@ -58,30 +58,46 @@ module.exports = function(grunt) {
 			"list": ["development", "test", "staging", "production"],
 			"configDir": "config/environments"
 		});
-		var cmd = "Execute `" + "grunt init-environment".cyan + "`";
+		var failed = false;
+		var error = function(msg, solution) {
+			failed = true;
+			solution = solution === "init"
+				? " (execute `grunt init-environment`)"
+				: (solution === "fill-in"
+					? " (find [PLACEHOLDER] string and replace it with the corresponding value)"
+					: ""
+				);
+			grunt.log.writeln(msg.red + solution.grey);
+		};
+		var sample = grunt.file.readJSON(options.configDir + "/sample.json");
 		var check = function(env) {
 			var filename = options.configDir + "/" + env + ".json";
+			grunt.log.write("Checking " + filename.cyan + " ... ");
 			if (!grunt.file.exists(filename)) {
-				grunt.fail.fatal("Some environment config files are absent. " + cmd);
+				error("absent", "init");
+				return;
+			}
+			var cfg = grunt.file.readJSON(filename);
+			if (_.isEmpty(cfg)) {
+				error("absent", "init");
+				return;
+			}
+			if (sample.version > cfg.version) {
+				error("outdated", "init");
+				return;
 			}
 			var content = grunt.file.read(filename);
 			if (content.indexOf("[PLACEHOLDER]") !== -1) {
-				grunt.fail.fatal("There are unfilled fields in the file " + filename.cyan + " . Find [PLACEHOLDER] string and replace it with the corresponding value.".yellow);
+				error("not ready", "fill-in");
+				return;
 			}
+			grunt.log.ok();
 		};
-		var cfg = grunt.config("envConfig");
-		if (_.isEmpty(cfg)) {
-			grunt.fail.fatal("Environment config files are absent. " + cmd);
-		}
-		var sample = grunt.file.readJSON(options.configDir + "/sample.json");
-		if (sample.version > cfg.version) {
-			grunt.fail.fatal("Environment config files are outdated. " + cmd);
-		}
 		if (name && _.contains(options.list, name)) {
 			check(name);
 		} else {
-			_.each(options.environments, check);
+			_.each(options.list, check);
 		}
-		grunt.log.ok("Environment config files are good.");
+		return !failed;
 	});
 };
