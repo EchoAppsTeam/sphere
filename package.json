@@ -6,9 +6,24 @@
     "name": "Echo",
     "url": "http://aboutecho.com"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/EchoAppsTeam/sphere.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EchoAppsTeam/sphere/issues"
+  },
+  "licenses": [
+    {
+      "type": "Apache-2.0"
+    }
+  ],
+  "engines": {
+    "node": ">=0.8"
+  },
   "dependencies": {
     "lodash": "~2.3.0",
-    "ftp-uploader": "git://github.com/EchoAppsTeam/ftp-uploader.git"
+    "ftp-uploader": "~0.1.0"
   },
   "keywords": [
     "Echo",
@@ -18,7 +33,6 @@
     "release",
     "gruntplugin"
   ],
-  "private": true,
   "devDependencies": {
     "grunt": "~0.4.2",
     "grunt-contrib-jshint": "~0.7.2"
