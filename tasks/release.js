@@ -208,7 +208,6 @@ module.exports = function(grunt) {
 				};
 			})
 		}).then(function(response) {
-			response = JSON.parse(response);
 			if (!response.id) {
 				grunt.fail.fatal("Purge request failed");
 				return;
@@ -222,7 +221,6 @@ module.exports = function(grunt) {
 					})
 					.then(function(status) {
 						var estimates = [], statuses = [];
-						status = JSON.parse(status);
 						status.entryStatuses.forEach(function(entry) {
 							statuses.push(entry.url.yellow + ": " + (entry.result || entry.status).cyan);
 							if (!entry.completed) {
