@@ -2,8 +2,8 @@ module.exports = function(grunt) {
 	"use strict";
 
 	var FtpUploader = require("ftp-uploader");
-	var http = require("http");
 	var _ = require("lodash");
+	var Q = require("q");
 
 	var release = {};
 
@@ -186,67 +186,77 @@ module.exports = function(grunt) {
 			done();
 			return;
 		}
-		var xml =
-			'<?xml version="1.0" encoding="utf-8"?>' +
-			'<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
-				'<soap:Header>' +
-					'<AuthHeader xmlns="http://www.llnw.com/Purge">' +
-						'<Username>' + config.user + '</Username>' +
-						'<Password>' + config.password + '</Password>' +
-					'</AuthHeader>' +
-				'</soap:Header>' +
-				'<soap:Body>' +
-					'<CreatePurgeRequest xmlns="http://www.llnw.com/Purge">' +
-					'<request>' +
-						'<EmailType>detail</EmailType>' +
-						'<EmailSubject>[Limelight] Code pushed to CDN (' + (release.purge.title || "manual purge") + ')</EmailSubject>' +
-						'<EmailTo>' + config.emailTo + '</EmailTo>' +
-						'<EmailCc>' + (config.emailCC || "") + '</EmailCc>' +
-						'<EmailBcc></EmailBcc>' +
-						'<Entries>' +
-							release.purge.paths.map(function(path) {
-								return '<PurgeRequestEntry>' +
-									'<Shortname>' + config.target.name + '</Shortname>' +
-									'<Url>' + config.target.url.replace("{path}", path) + '</Url>' +
-									'<Regex>true</Regex>' +
-								'</PurgeRequestEntry>';
-							}).join("") +
-						'</Entries>' +
-					'</request>' +
-					'</CreatePurgeRequest>' +
-				'</soap:Body>' +
-			'</soap:Envelope>';
 		if (release.debug) {
-			console.log("Paths to purge: " + release.purge.paths);
-			console.log(xml);
-			done();
-			return;
+			grunt.log.writeln("Paths to purge: " + release.purge.paths);
 		}
-		var req = http.request({
-			"host": config.host,
-			"path": config.path,
-			"method": "POST",
-			"headers": {
-				"Content-Type": "text/xml"
-			}
-		}, function(response) {
-			if (response.statusCode === 200) {
-				grunt.log.ok();
-				done();
-			} else if (response.statusCode === 500) {
-				response.on("data", function (text) {
-					grunt.log.writeln(text);
-					grunt.fail.fatal("Can't purge");
-				});
-			} else {
-				grunt.fail.fatal("Can't purge: " + response.statusCode + " error");
-			}
+		var API = require("limelight-purge-api");
+		var api = new API({
+			"user": config.user,
+			"apiKey": config.apiKey,
+			"dryRun": release.debug
 		});
-		req.on("error", function(e) {
-			grunt.fail.fatal("Problem with request: " + e.message);
-		});
-		req.write(xml);
-		req.end();
+		api.createPurge({
+			"emailType": "detail",
+			"emailSubject": "[Limelight] Code pushed to CDN (" + (release.purge.title || "manual purge") + ")",
+			"emailTo": config.emailTo,
+			"emailCC": config.emailCC || "",
+			"entries": release.purge.paths.map(function(path) {
+				return {
+					"shortname": config.shortname,
+					"url": config.url.replace("{path}", path),
+					"regex": true
+				};
+			})
+		}).then(function(response) {
+			response = JSON.parse(response);
+			if (!response.id) {
+				grunt.fail.fatal("Purge request failed");
+				return;
+			}
+			var got = Q.defer();
+			(function check() {
+				Q.delay(5000)
+					.then(function() {
+						grunt.log.write("Checking status... ");
+						return api.getStatusById(response.id, {"includeDetail": true});
+					})
+					.then(function(status) {
+						var estimates = [], statuses = [];
+						status = JSON.parse(status);
+						status.entryStatuses.forEach(function(entry) {
+							statuses.push(entry.url.yellow + ": " + (entry.result || entry.status).cyan);
+							if (!entry.completed) {
+								estimates.push(Date.parse(entry.estimatedCompletedDate));
+							}
+						});
+						if (estimates.length) {
+							var ETA =  Math.max.apply(this, estimates);
+							ETA = Math.ceil((ETA - Date.now()) / 1000);
+							grunt.log.writeln("ETA: " + ETA + " second(s).");
+							grunt.log.writeln("\t" + statuses.join("\n\t"));
+							// don't wait if it's more than 5 minutes, but should be faster anyway
+							if (ETA > 300) {
+								got.reject(
+									"Too long to wait. The detailed status will " +
+									"be sent to " + response.emailTo +
+									(response.emailCC ? " and " + response.emailCC : "") +
+									" anyway."
+								);
+								return;
+							}
+							check();
+						} else {
+							grunt.log.writeln("Completed".green);
+							grunt.log.writeln("\t" + statuses.join("\n\t"));
+							got.resolve();
+						}
+					})
+					.fail(got.reject);
+			})();
+			return got.promise;
+		}).fail(function(reason) {
+			grunt.log.warn(reason);
+		}).done(done);
 	}
 
 	function postReleaseCheck(done) {

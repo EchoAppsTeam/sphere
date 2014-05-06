@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "lodash": "~2.4.1",
-    "ftp-uploader": "~0.1.0"
+    "ftp-uploader": "~0.1.0",
+    "limelight-purge-api": "~0.1.0",
+    "q": "~1.0.1"
   },
   "keywords": [
     "Echo",
