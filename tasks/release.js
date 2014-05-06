@@ -145,6 +145,10 @@ module.exports = function(grunt) {
 		if (_.isEmpty(release.config.auth[loc])) {
 			grunt.fail.fatal("There is no auth info for \"" + loc + "\").");
 		}
+		if (release.debug) {
+			done();
+			return;
+		}
 		var ftp = new FtpUploader({
 			"complete": done,
 			"auth": release.config.auth[loc],
@@ -208,6 +212,10 @@ module.exports = function(grunt) {
 				};
 			})
 		}).then(function(response) {
+			if (release.debug) {
+				grunt.log.writeln("The following request data is going to be sent:", response);
+				return Q.reject("No actual purge is performed.");
+			}
 			if (!response.id) {
 				grunt.fail.fatal("Purge request failed");
 				return;
