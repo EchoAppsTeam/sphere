@@ -33,7 +33,10 @@ module.exports = function(grunt) {
 			"skipPurge": false
 		});
 		if (!_.contains(["production", "staging"], options.environment)) {
-			grunt.fail.fatal("Release can be performed only in the \"production\" and \"staging\" environment.");
+			grunt.fail.fatal(
+				"Release can be performed only in the \"production\" " +
+				"and \"staging\" environment."
+			);
 		}
 
 		if (options.configFile && grunt.file.exists(options.configFile)) {
@@ -60,9 +63,9 @@ module.exports = function(grunt) {
 				"paths": options.purgePaths
 			};
 		}
-		var tasks = ["release-steps:build", "release-steps:prepare", "release-steps:check:before"];
-		if (options.skipBuild) {
-			tasks.shift();
+		var tasks = ["release-steps:prepare", "release-steps:check:before"];
+		if (!options.skipBuild) {
+			tasks.unshift("release-steps:build");
 		}
 		tasks = tasks.concat(options.beforeDeploy);
 		_.each(release.deploy.targets, function(v, target) {
@@ -79,7 +82,10 @@ module.exports = function(grunt) {
 
 	grunt.registerTask("release-steps", function(action) {
 		if (!grunt.config("release.options.inProgress")) {
-			grunt.fail.fatal("Release steps can't be executed separately but only as a part of whole release process.");
+			grunt.fail.fatal(
+				"Release steps can't be executed separately " +
+				"but only as a part of whole release process."
+			);
 		}
 		var handler = function() {};
 		if (action === "prepare") {
@@ -117,17 +123,21 @@ module.exports = function(grunt) {
 	}
 
 	function prepareRelease(done) {
-		release.deploy.data = _.reduce(release.deploy.targets, function(acc, upload, target) {
-			acc[target] = {
-				"src": grunt.file.expand({
-					"cwd": upload.cwd,
-					"filter": "isFile"
-				}, upload.src),
-				"dest": upload.dest,
-				"cwd": upload.cwd
-			};
-			return acc;
-		}, {});
+		release.deploy.data = _.reduce(
+			release.deploy.targets,
+			function(acc, upload, target) {
+				acc[target] = {
+					"src": grunt.file.expand({
+						"cwd": upload.cwd,
+						"filter": "isFile"
+					}, upload.src),
+					"dest": upload.dest,
+					"cwd": upload.cwd
+				};
+				return acc;
+			},
+			{}
+		);
 		done();
 	}
 
@@ -135,7 +145,7 @@ module.exports = function(grunt) {
 		// TODO: check if we have modified files, we must not release this
 		_.each(release.deploy.data, function(upload, target) {
 			if (!upload.src.length) {
-			grunt.log.writeln("Nothing to upload for target ".yellow + target);
+				grunt.log.writeln("Nothing to upload for target ".yellow + target);
 				done(false);
 				return;
 			}
@@ -169,7 +179,10 @@ module.exports = function(grunt) {
 		var target = this.args.slice(1).join(":");
 		/* jshint validthis:false */
 		var upload = release.deploy.data[target];
-		grunt.log.writeln((release.debug ? "[simulation] ".cyan : "") + "Releasing to " + release.deploy.location.cyan);
+		grunt.log.writeln(
+			(release.debug ? "[simulation] ".cyan : "") +
+			"Releasing to " + release.deploy.location.cyan
+		);
 		var ftp = new FtpUploader({
 			"complete": done,
 			"auth": release.config.auth[release.deploy.location],
@@ -201,7 +214,8 @@ module.exports = function(grunt) {
 		});
 		api.createPurge({
 			"emailType": "detail",
-			"emailSubject": "[Limelight] Code pushed to CDN (" + (release.purge.title || "manual purge") + ")",
+			"emailSubject": "[Limelight] Code pushed to CDN " +
+				"(" + (release.purge.title || "manual purge") + ")",
 			"emailTo": config.emailTo,
 			"emailCC": config.emailCC || "",
 			"entries": release.purge.paths.map(function(path) {

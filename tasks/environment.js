@@ -21,20 +21,25 @@ module.exports = function(grunt) {
 					noValue.push(keyString.substring(1));
 					return "[PLACEHOLDER]";
 				}
-			} else if (_.isArray(value)) {
-				if (_.isUndefined(oldValue)) oldValue = [];
+			}
+			if (_.isArray(value)) {
+				if (_.isUndefined(oldValue)) {
+					oldValue = [];
+				}
 				return _.map(value, function(v, i) {
 					return merge(v, oldValue[i], keyString + "." + i);
 				});
-			} else if (_.isObject(value)) {
-				if (_.isUndefined(oldValue)) oldValue = {};
+			}
+			if (_.isObject(value)) {
+				if (_.isUndefined(oldValue)) {
+					oldValue = {};
+				}
 				return _.reduce(value, function(acc, v, k) {
 					acc[k] = merge(v, oldValue[k], keyString + "." + k);
 					return acc;
 				}, {});
-			} else {
-				return value;
 			}
+			return value;
 		};
 		var sample = grunt.file.readJSON(options.configDir + "/sample.json");
 		_.each(options.list, function(env) {
@@ -47,7 +52,10 @@ module.exports = function(grunt) {
 			// only new fields unfilled and removing obsolete fields
 			newCfg = merge(newCfg, oldCfg, "");
 			if (noValue.length) {
-				grunt.log.writeln(filename.cyan + ": " + ("fill in the following fields:\n\t" + noValue.join("\n\t")).yellow);
+				grunt.log.writeln(
+					filename.cyan + ": " +
+					("fill in the following fields:\n\t" + noValue.join("\n\t")).yellow
+				);
 			}
 			grunt.file.write(filename, JSON.stringify(newCfg, null, "\t"));
 		});
