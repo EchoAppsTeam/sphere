@@ -23,6 +23,9 @@ module.exports = function(grunt) {
 			}
 		});
 
+		// save release target to allow other tasks to use it
+		// (we must do this operation before reading options because we use it as well)
+		grunt.config("release.options.target", this.target);
 		var options = this.options({
 			"purgeTitle": "manual purge",
 			"purgePaths": [],
