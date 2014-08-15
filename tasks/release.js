@@ -213,53 +213,17 @@ module.exports = function(grunt) {
 			})
 		}).then(function(response) {
 			if (release.debug) {
-				grunt.log.writeln("The following request data is going to be sent:", response);
+				grunt.log.writeln(
+					"The following request data is going to be sent:",
+					response
+				);
 				return Q.reject("No actual purge is performed.");
 			}
 			if (!response.id) {
 				grunt.fail.fatal("Purge request failed");
 				return;
 			}
-			var got = Q.defer();
-			(function check() {
-				Q.delay(5000)
-					.then(function() {
-						grunt.log.write("Checking status... ");
-						return api.getStatusById(response.id, {"includeDetail": true});
-					})
-					.then(function(status) {
-						var estimates = [], statuses = [];
-						status.entryStatuses.forEach(function(entry) {
-							statuses.push(entry.url.yellow + ": " + (entry.result || entry.status).cyan);
-							if (!entry.completed) {
-								estimates.push(Date.parse(entry.estimatedCompletedDate));
-							}
-						});
-						if (estimates.length) {
-							var ETA =  Math.max.apply(this, estimates);
-							ETA = Math.ceil((ETA - Date.now()) / 1000);
-							grunt.log.writeln("ETA: " + ETA + " second(s).");
-							grunt.log.writeln("\t" + statuses.join("\n\t"));
-							// don't wait if it's more than 5 minutes, but should be faster anyway
-							if (ETA > 300) {
-								got.reject(
-									"Too long to wait. The detailed status will " +
-									"be sent to " + response.emailTo +
-									(response.emailCC ? " and " + response.emailCC : "") +
-									" anyway."
-								);
-								return;
-							}
-							check();
-						} else {
-							grunt.log.writeln("Completed".green);
-							grunt.log.writeln("\t" + statuses.join("\n\t"));
-							got.resolve();
-						}
-					})
-					.fail(got.reject);
-			})();
-			return got.promise;
+			return waitForPurge(response, api);
 		}).fail(function(reason) {
 			grunt.log.warn(reason);
 		}).done(done);
@@ -268,5 +232,54 @@ module.exports = function(grunt) {
 	function postReleaseCheck(done) {
 		grunt.log.writeln("Not implemented yet");
 		done();
+	}
+
+	function waitForPurge(response, api, defer) {
+		var inRecursion = !!defer;
+		if (!inRecursion) {
+			defer = Q.defer();
+		}
+		Q.delay(5000)
+			.then(function() {
+				grunt.log.write("Checking status... ");
+				return api.getStatusById(response.id, {"includeDetail": true});
+			})
+			.then(function(status) {
+				var estimates = [], statuses = [];
+				status.entryStatuses.forEach(function(entry) {
+					statuses.push(
+						entry.url.yellow + ": " +
+						(entry.result || entry.status).cyan
+					);
+					if (!entry.completed) {
+						estimates.push(Date.parse(entry.estimatedCompletedDate));
+					}
+				});
+				if (estimates.length) {
+					var ETA =  Math.max.apply(this, estimates);
+					ETA = Math.ceil((ETA - Date.now()) / 1000);
+					grunt.log.writeln("ETA: " + ETA + " second(s).");
+					grunt.log.writeln("\t" + statuses.join("\n\t"));
+					// don't wait if it's more than 5 minutes, but should be faster anyway
+					if (ETA > 300) {
+						defer.reject(
+							"Too long to wait. The detailed status will " +
+							"be sent to " + response.emailTo +
+							(response.emailCC ? " and " + response.emailCC : "") +
+							" anyway."
+						);
+						return;
+					}
+					waitForPurge(response, api, defer);
+				} else {
+					grunt.log.writeln("Completed".green);
+					grunt.log.writeln("\t" + statuses.join("\n\t"));
+					defer.resolve();
+				}
+			})
+			.fail(defer.reject);
+		if (!inRecursion) {
+			return defer.promise;
+		}
 	}
 };
