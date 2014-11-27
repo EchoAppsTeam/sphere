@@ -1,7 +1,7 @@
 {
   "name": "sphere",
   "description": "Collection of Grunt tasks to build and release projects built on top of Echo SDK",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": {
     "name": "Echo",
     "url": "http://aboutecho.com"
