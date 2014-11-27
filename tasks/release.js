@@ -156,7 +156,7 @@ module.exports = function(grunt) {
 
 		var loc = release.deploy.location;
 		if (_.isEmpty(release.config.auth[loc])) {
-			grunt.fail.fatal("There is no auth info for \"" + loc + "\").");
+			grunt.fail.fatal("There is no auth info for \"" + loc + "\".");
 		}
 		if (release.debug) {
 			done();
