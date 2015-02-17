@@ -68,7 +68,7 @@ module.exports = function(grunt) {
 		}
 		var tasks = ["release-steps:prepare", "release-steps:check:before"];
 		if (!options.skipBuild) {
-			tasks.unshift("release-steps:build");
+			tasks.push("release-steps:build");
 		}
 		tasks = tasks.concat(options.beforeDeploy);
 		_.each(release.deploy.targets, function(v, target) {
