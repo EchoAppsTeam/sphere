@@ -148,12 +148,19 @@ module.exports = function(grunt) {
 	function preReleaseCheck(done) {
 		var silent = shell.config.silent;
 		shell.config.silent = true;
-		var changes = shell.exec("git status -s").output;
-		shell.config.silent = silent;
-		if (!/^\s*$/.test(changes)) {
+		var changes = shell.exec("git status -s").output.trim();
+		if (changes) {
 			grunt.log.writeln("There are some modified and/or unversioned files:\n".yellow + changes);
 			grunt.fail.fatal("Please stash them before performing release.");
 		}
+
+		if (
+			release.environment === "production" &&
+			shell.exec("git rev-parse --abbrev-ref HEAD").output.trim() !== "master"
+		) {
+			grunt.fail.fatal("Only master branch can be released to production.");
+		}
+		shell.config.silent = silent;
 
 		_.each(release.deploy.data, function(upload, target) {
 			if (!upload.src.length) {
