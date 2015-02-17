@@ -4,6 +4,7 @@ module.exports = function(grunt) {
 	var FtpUploader = require("ftp-uploader");
 	var _ = require("lodash");
 	var Q = require("q");
+	var shell = require("shelljs");
 
 	var release = {};
 
@@ -145,7 +146,15 @@ module.exports = function(grunt) {
 	}
 
 	function preReleaseCheck(done) {
-		// TODO: check if we have modified files, we must not release this
+		var silent = shell.config.silent;
+		shell.config.silent = true;
+		var changes = shell.exec("git status -s").output;
+		shell.config.silent = silent;
+		if (!/^\s*$/.test(changes)) {
+			grunt.log.writeln("There are some modified and/or unversioned files:\n".yellow + changes);
+			grunt.fail.fatal("Please stash them before performing release.");
+		}
+
 		_.each(release.deploy.data, function(upload, target) {
 			if (!upload.src.length) {
 				grunt.log.writeln("Nothing to upload for target ".yellow + target);
