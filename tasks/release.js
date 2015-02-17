@@ -262,7 +262,8 @@ module.exports = function(grunt) {
 				return api.getStatusById(response.id, {"includeDetail": true});
 			})
 			.then(function(status) {
-				var estimates = [], statuses = [];
+				var estimates = [];
+				var statuses = [];
 				status.entryStatuses.forEach(function(entry) {
 					statuses.push(
 						entry.url.yellow + ": " +
